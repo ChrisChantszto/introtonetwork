@@ -27,8 +27,8 @@ traceroute_list = []
 # helper function
 def ping_at_interval(address, interval, check, result):
     while True:
-        current_result = be.ping(address)
-        print(f"{check}: {result} - Ping Result: {current_result}")
+        ping_address, ping_time = be.ping(address)
+        print(f"{check}: {result} - Ping Result: {ping_address}, {ping_time}")
         time.sleep(interval)
 
 def traceroute_at_interval(address, interval, check, result):
@@ -93,6 +93,7 @@ def main() -> None:
                             time_interval = int(time_interval)  # Convert the time_interval to an integer
                             if p_oder_t == "ping":
                                 ping_list.append((domain_ip, time_interval, "HTTP Status", result))
+                                print(ping_list)
 
                             elif p_oder_t == "traceroute":
                                 traceroute_list.append((domain_ip, time_interval, "HTTP Status", result))

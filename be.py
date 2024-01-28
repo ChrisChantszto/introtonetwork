@@ -451,10 +451,10 @@ def check_udp_port(ip_address: str, port: int, timeout: int = 3) -> (bool, str):
         return False, f"Failed to check UDP port {port} on {ip_address} due to an error: {e}"
 
 
-# # Ping Usage Example
-# print("Ping Example:")
-# ping_addr, ping_time = ping("8.8.8.8")
-# print(f"Google DNS (ping): {ping_addr[0]} - {ping_time:.2f} ms" if (ping_addr and ping_time is not None) else "Google DNS (ping): Request timed out or no reply received")
+# Ping Usage Example
+print("Ping Example:")
+ping_addr, ping_time = ping("8.8.8.8")
+print(f"Google DNS (ping): {ping_addr[0]} - {ping_time:.2f} ms" if (ping_addr and ping_time is not None) else "Google DNS (ping): Request timed out or no reply received")
 
 # # Traceroute Usage Example
 # # Note: This function is included as an extra to round out the ICMP examples.
@@ -462,11 +462,11 @@ def check_udp_port(ip_address: str, port: int, timeout: int = 3) -> (bool, str):
 # print("Google DNS (traceroute):")
 # print(traceroute("8.8.8.8", 30, 1, True))
 
-# # HTTP/HTTPS Usage Examples
-# print("\nHTTP/HTTPS Examples:")
-# http_url = "http://google.com"
-# http_server_status, http_server_response_code = check_server_http(http_url)
-# print(f"HTTP URL: {http_url}, HTTP server status: {http_server_status}, Status Code: {http_server_response_code if http_server_response_code is not None else 'N/A'}")
+# HTTP/HTTPS Usage Examples
+print("\nHTTP/HTTPS Examples:")
+http_url = "http://google.com"
+http_server_status, http_server_response_code = check_server_http(http_url)
+print(f"HTTP URL: {http_url}, HTTP server status: {http_server_status}, Status Code: {http_server_response_code if http_server_response_code is not None else 'N/A'}")
 
 # https_url = "https://example.com"
 # https_server_status, https_server_response_code, description = check_server_https(https_url)
