@@ -4,6 +4,7 @@
 
 import threading
 import time
+import socket
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.patch_stdout import patch_stdout
@@ -93,9 +94,17 @@ def echo_worker(echo_item):
     address, port, interval = echo_item
     while True:
         if print_event.is_set():
-            result = be.tcp_server(address, port, "Hello, echo server!")
-            status_str = "UP" if result else "DOWN"
-            print(f"Echo Server {address}:{port} is {status_str}.")
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect((address, port))
+
+            message = "Hello, server from command lines!"
+            print(f"Sending: {message}")
+            sock.sendall(message.encode())
+
+            response = sock.recv(1024)
+            print(f"Received: {response.decode()}")
+            # result = be.tcp_server(address, port)
+            sock.close()
             time.sleep(interval)
 
 # Main function
@@ -235,9 +244,9 @@ def main() -> None:
                     elif user_input == "ECHO":
                         echo_ip: str = session.prompt("Enter the target echo server IP: \n")
                         echo_port: str = session.prompt("Enter the target echo server port: \n")
+                        echo_port = int(echo_port)
                         echo_interval: str = session.prompt("Enter frequency of check (in seconds): \n")
-                        echo_interval = int(echo_interval)  # Convert the echo_interval to an integer
-                        echo_port = int(echo_port)  # Convert the echo_port to an integer
+                        echo_interval = int(echo_interval)
                         echo_list.append((echo_ip, echo_port, echo_interval))
 
                         # Create and start a new thread for each item in echo_list

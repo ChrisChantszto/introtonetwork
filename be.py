@@ -20,7 +20,7 @@ from socket import gaierror
 from time import ctime
 from typing import Tuple, Optional, Any
 
-def tcp_server(server_address: str, server_port: int):
+def tcp_server(server_address: str, server_port: int) -> bool:
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     server_address = server_address
@@ -544,4 +544,4 @@ def check_udp_port(ip_address: str, port: int, timeout: int = 3) -> (bool, str):
 
 
 if __name__ == "__main__":
-    tcp_server()
+    tcp_server("127.0.0.1", 12345)
