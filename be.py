@@ -20,6 +20,39 @@ from socket import gaierror
 from time import ctime
 from typing import Tuple, Optional, Any
 
+def tcp_server(server_address: str, server_port: int):
+    server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    server_address = server_address
+    server_port = server_port
+    server_sock.bind((server_address, server_port))
+
+    server_sock.listen(5)
+
+    print("Server is listening for incoming connections...")
+
+    try:
+        while True:
+            client_sock, client_address = server_sock.accept()
+            print(f"Connection from {client_address}")
+
+            try:
+                message = client_sock.recv(1024)
+                print(f"Received message: {message.decode()}")
+
+                response = "Message received"
+                client_sock.sendall(response.encode())
+
+            finally:
+                client_sock.close()
+                print(f"Connection with {client_address} closed")
+    except KeyboardInterrupt:
+        print("Server is shutting down")
+
+    finally:
+        server_sock.close()
+        print("Server socket closed")
+
 
 def calculate_icmp_checksum(data: bytes) -> int:
     """
@@ -452,21 +485,21 @@ def check_udp_port(ip_address: str, port: int, timeout: int = 3) -> (bool, str):
 
 
 # Ping Usage Example
-print("Ping Example:")
-ping_addr, ping_time = ping("8.8.8.8")
-print(f"Google DNS (ping): {ping_addr[0]} - {ping_time:.2f} ms" if (ping_addr and ping_time is not None) else "Google DNS (ping): Request timed out or no reply received")
+# print("Ping Example:")
+# ping_addr, ping_time = ping("8.8.8.8")
+# print(f"Google DNS (ping): {ping_addr[0]} - {ping_time:.2f} ms" if (ping_addr and ping_time is not None) else "Google DNS (ping): Request timed out or no reply received")
 
 # # Traceroute Usage Example
 # # Note: This function is included as an extra to round out the ICMP examples.
 # print("\nTraceroute Example:")
 # print("Google DNS (traceroute):")
-# print(traceroute("8.8.8.8", 30, 1, True))
+# print(traceroute("8.8.8.8"))
 
 # HTTP/HTTPS Usage Examples
-print("\nHTTP/HTTPS Examples:")
-http_url = "http://google.com"
-http_server_status, http_server_response_code = check_server_http(http_url)
-print(f"HTTP URL: {http_url}, HTTP server status: {http_server_status}, Status Code: {http_server_response_code if http_server_response_code is not None else 'N/A'}")
+# print("\nHTTP/HTTPS Examples:")
+# http_url = "http://google.com"
+# http_server_status, http_server_response_code = check_server_http(http_url)
+# print(f"HTTP URL: {http_url}, HTTP server status: {http_server_status}, Status Code: {http_server_response_code if http_server_response_code is not None else 'N/A'}")
 
 # https_url = "https://example.com"
 # https_server_status, https_server_response_code, description = check_server_https(https_url)
@@ -495,7 +528,7 @@ print(f"HTTP URL: {http_url}, HTTP server status: {http_server_status}, Status C
 #     print(f"DNS Server: {dns_server}, Status: {dns_server_status}, {dns_record_type} Records Results: {dns_query_results}")
 
 
-# # TCP Port Usage Example
+# TCP Port Usage Example
 # print("\nTCP Port Example:")
 # tcp_port_server = "google.com"
 # tcp_port_number = 80
@@ -510,3 +543,5 @@ print(f"HTTP URL: {http_url}, HTTP server status: {http_server_status}, Status C
 # print(f"Server: {udp_port_server}, UDP Port: {udp_port_number}, UDP Port Status: {udp_port_status}, Description: {udp_port_description}")
 
 
+if __name__ == "__main__":
+    tcp_server()

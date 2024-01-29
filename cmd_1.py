@@ -10,6 +10,16 @@ from prompt_toolkit.patch_stdout import patch_stdout
 
 import be
 
+http_list = []
+https_list = []
+icmp_list = []
+dns_list = []
+ntp_list = []
+tcp_list = []
+udp_list = []
+echo_list = []
+
+print_event = threading.Event()
 
 # Worker thread function
 def worker(stop_event: threading.Event) -> None:
@@ -18,24 +28,75 @@ def worker(stop_event: threading.Event) -> None:
     Prints a message every 5 seconds until stop_event is set.
     """
     while not stop_event.is_set():
-        print("Hello from the worker thread.")
         time.sleep(5)
 
-ping_list = []
-traceroute_list = []
-
-# helper function
-def ping_at_interval(address, interval, check, result):
+# Worker thread function for HTTP monitoring
+def http_worker(http_item):
+    address, interval = http_item
     while True:
-        ping_address, ping_time = be.ping(address)
-        print(f"{check}: {result} - Ping Result: {ping_address}, {ping_time}")
-        time.sleep(interval)
+        if print_event.is_set():
+            result = be.check_server_http(address)
+            print(f"HTTP Status for {address}: {result}")
+            time.sleep(interval)
 
-def traceroute_at_interval(address, interval, check, result):
+def https_worker(https_item):
+    address, interval = https_item
     while True:
-        current_result = be.traceroute(address)
-        print(f"{check}: {result} - Ping Result: {current_result}")
-        time.sleep(interval)
+        if print_event.is_set():
+            result = be.check_server_https(address)
+            print(f"HTTPS Status for {address}: {result}")
+            time.sleep(interval)
+
+def icmp_worker(icmp_item):
+    address, interval = icmp_item
+    while True:
+        if print_event.is_set():
+            result_add, result_time = be.ping(address)
+            print(f"ICMP Status for {address}: Response Address {result_add} Total Ping Time: {result_time}")
+            time.sleep(interval)
+
+def dns_worker(dns_item):
+    server, query, record_type, interval = dns_item
+    while True:
+        if print_event.is_set():
+            status, result = be.check_dns_server_status(server, query, record_type)
+            status_str = "UP" if status else "DOWN"
+            print(f"DNS Server {server} is {status_str}. Query result: {result}")
+            time.sleep(interval)
+
+def ntp_worker(ntp_item):
+    ntp_server, time_interval = ntp_item
+    while True:
+        if print_event.is_set():
+            ntp_server_status, ntp_server_time = be.check_ntp_server(ntp_server)
+            status_str = "UP" if ntp_server_status else "DOWN"
+            print(f"NTP Server {ntp_server} is {status_str}. Query result: {ntp_server_time}")
+            time.sleep(time_interval)
+
+def tcp_worker(tcp_item):
+    TCP_server, TCP_port_number, time_interval = tcp_item
+    while True:
+        if print_event.is_set():
+            tcp_port_status, tcp_port_description = be.check_tcp_port(TCP_server, TCP_port_number)
+            print(f"Server: {TCP_server}, TCP Port: {TCP_port_number}, TCP Port Status: {tcp_port_status}, Description: {tcp_port_description}")
+            time.sleep(time_interval)
+
+def udp_worker(udp_item):
+    UDP_server, UDP_port_number, time_interval = udp_item
+    while True:
+        if print_event.is_set():
+            udp_port_status, udp_port_description = be.check_udp_port(UDP_server, UDP_port_number)
+            print(f"Server: {UDP_server}, TCP Port: {UDP_port_number}, TCP Port Status: {udp_port_status}, Description: {udp_port_description}")
+            time.sleep(time_interval)
+
+def echo_worker(echo_item):
+    address, port, interval = echo_item
+    while True:
+        if print_event.is_set():
+            result = be.tcp_server(address, port, "Hello, echo server!")
+            status_str = "UP" if result else "DOWN"
+            print(f"Echo Server {address}:{port} is {status_str}.")
+            time.sleep(interval)
 
 # Main function
 def main() -> None:
@@ -53,7 +114,7 @@ def main() -> None:
 
     # Command completer for auto-completion
     # This is where you will add new auto-complete commands
-    command_completer: WordCompleter = WordCompleter(['exit'], ignore_case=True)
+    command_completer: WordCompleter = WordCompleter(['exit', 'HTTP', 'HTTPS', 'ICMP', 'DNS', "NTP", "begin", "ECHO"], ignore_case=True)
 
     # Create a prompt session
     session: PromptSession = PromptSession(completer=command_completer)
@@ -74,50 +135,116 @@ def main() -> None:
                     is_running = False
                 
                 elif user_input == "begin":
-                    for address, interval, check, result in ping_list:
-                        thread = threading.Thread(target=ping_at_interval, args=(address, interval, "HTTP Status", True))
-                        thread.start()
-                    
-                    for address, interval, check, result in traceroute_list:
-                        thread = threading.Thread(target=traceroute_at_interval, args=(address, interval, "HTTP Status", True))
-                        thread.start()
+                    print_event.set()
 
                 else:
                 
                     if user_input == "HTTP":
-                        domain_ip: str = session.prompt("Enter the target domain or IP address: \n")
-                        result = be.check_server_http(domain_ip)
-                        if True in result:
-                            p_oder_t: str = session.prompt("Do you want to ping or traceroute? \n")
-                            time_interval: str = session.prompt("Enter frequency of check (in seconds): \n")
-                            time_interval = int(time_interval)  # Convert the time_interval to an integer
-                            if p_oder_t == "ping":
-                                ping_list.append((domain_ip, time_interval, "HTTP Status", result))
-                                print(ping_list)
+                        domain_ip: str = session.prompt("Enter the target domain: \n")
+                        time_interval: str = session.prompt("Enter frequency of check (in seconds): \n")
+                        time_interval = int(time_interval)  # Convert the time_interval to an integer
+                        http_list.append((domain_ip, time_interval))
 
-                            elif p_oder_t == "traceroute":
-                                traceroute_list.append((domain_ip, time_interval, "HTTP Status", result))
+                        # Create and start a new thread for each item in http_list
+                        for http_item in http_list:
+                            http_thread = threading.Thread(target=http_worker, args=(http_item,))
+                            http_thread.daemon = True  # Ensures thread stops when main program exits
+                            http_thread.start()
 
                     elif user_input == "HTTPS":
-                        pass
+                        domain_ip_https: str = session.prompt("Enter the target domain: \n")
+                        time_interval_https: str = session.prompt("Enter frequency of check (in seconds): \n")
+                        time_interval_https = int(time_interval_https)
+                        https_list.append((domain_ip_https, time_interval_https))
+
+                        # Create and start a new thread for each item in http_list
+                        for https_item in https_list:
+                            https_thread = threading.Thread(target=https_worker, args=(https_item,))
+                            https_thread.daemon = True  # Ensures thread stops when main program exits
+                            https_thread.start()
+                        
 
                     elif user_input == "ICMP":
-                        pass
+                        icmp_ping: str = session.prompt("Enter the target ip: \n")
+                        time_interval_icmp: str = session.prompt("Enter frequency of check (in seconds): \n")
+                        time_interval_icmp = int(time_interval_icmp)
+                        icmp_list.append((icmp_ping, time_interval_icmp))
+
+                        # Create and start a new thread for each item in http_list
+                        for icmp_item in icmp_list:
+                            icmp_thread = threading.Thread(target=icmp_worker, args=(icmp_item,))
+                            icmp_thread.daemon = True  # Ensures thread stops when main program exits
+                            icmp_thread.start()
 
                     elif user_input == "DNS":
-                        pass
+                        dns_server: str = session.prompt("Enter the DNS server address: \n")
+                        query_domain: str = session.prompt("Enter the domain to query: \n")
+                        record_type: str = session.prompt("Enter the DNS record type (A, AAAA, MX, etc.): \n")
+                        time_interval_dns: str = session.prompt("Enter frequency of check (in seconds): \n")
+                        time_interval_dns = int(time_interval_dns)  # Convert the time_interval to an integer
+
+                        # Append the DNS monitoring settings to the dns_list
+                        dns_list.append((dns_server, query_domain, record_type, time_interval_dns))
+
+                        # Create and start a new thread for each item in dns_list
+                        for dns_item in dns_list:
+                            dns_thread = threading.Thread(target=dns_worker, args=(dns_item,))
+                            dns_thread.daemon = True  # Ensures thread stops when main program exits
+                            dns_thread.start()
 
                     elif user_input == "NTP":
-                        pass
+                        ntp_server: str = session.prompt("Enter the NTP server address: \n")
+                        time_interval_ntp: str = session.prompt("Enter frequency of check (in seconds): \n")
+                        time_interval_ntp = int(time_interval_ntp)
 
+                        ntp_list.append((ntp_server, time_interval_ntp))
+
+                        for ntp_item in ntp_list:
+                            ntp_thread = threading.Thread(target=ntp_worker, args=(ntp_item,))
+                            ntp_thread.daemon = True  # Ensures thread stops when main program exits
+                            ntp_thread.start()
+                        
                     elif user_input == "TCP":
-                        pass
+                        TCP_server: str = session.prompt("Enter the TCP server address: \n")
+                        TCP_port_number: str = session.prompt("Enter the TCP port no.: \n")
+                        TCP_port_number = int(TCP_port_number)
+                        time_interval_tcp: str = session.prompt("Enter frequency of check (in seconds): \n")
+                        time_interval_tcp = int(time_interval_tcp)
+
+                        tcp_list.append((TCP_server, TCP_port_number, time_interval_tcp))
+
+                        for tcp_item in tcp_list:
+                            tcp_thread = threading.Thread(target=tcp_worker, args=(tcp_item,))
+                            tcp_thread.daemon = True  # Ensures thread stops when main program exits
+                            tcp_thread.start()
 
                     elif user_input == "UDP":
-                        pass
+                        UDP_server: str = session.prompt("Enter the UDP target ip address: \n")
+                        UDP_port_number: str = session.prompt("Enter the UDP port no.: \n")
+                        UDP_port_number = int(UDP_port_number)
+                        time_interval_udp: str = session.prompt("Enter frequency of check (in seconds): \n")
+                        time_interval_udp = int(time_interval_udp)
 
-                    elif user_input == "TCP Local Server":
-                        pass
+                        udp_list.append((UDP_server, UDP_port_number, time_interval_udp))
+
+                        for udp_item in udp_list:
+                            udp_thread = threading.Thread(target=udp_worker, args=(udp_item,))
+                            udp_thread.daemon = True  # Ensures thread stops when main program exits
+                            udp_thread.start()
+
+                    elif user_input == "ECHO":
+                        echo_ip: str = session.prompt("Enter the target echo server IP: \n")
+                        echo_port: str = session.prompt("Enter the target echo server port: \n")
+                        echo_interval: str = session.prompt("Enter frequency of check (in seconds): \n")
+                        echo_interval = int(echo_interval)  # Convert the echo_interval to an integer
+                        echo_port = int(echo_port)  # Convert the echo_port to an integer
+                        echo_list.append((echo_ip, echo_port, echo_interval))
+
+                        # Create and start a new thread for each item in echo_list
+                        for echo_item in echo_list:
+                            echo_thread = threading.Thread(target=echo_worker, args=(echo_item,))
+                            echo_thread.daemon = True  # Ensures thread stops when main program exits
+                            echo_thread.start()
 
                     is_running = True
                 
